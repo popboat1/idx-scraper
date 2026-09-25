@@ -419,9 +419,22 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Remote VM SSH user (default: {DEFAULT_VM_USER}).",
     )
     parser.add_argument(
+        "--sync-vm",
+        action="store_true",
+        default=False,
+        help="Update remote VM .env file via SSH (disabled by default after migration to GitHub Actions).",
+    )
+    parser.add_argument(
         "--sync-github",
         action="store_true",
-        help="Sync STOCKBIT_TOKEN to GitHub repository secrets",
+        default=True,
+        help="Sync STOCKBIT_TOKEN to GitHub repository secrets (default: True).",
+    )
+    parser.add_argument(
+        "--no-sync-github",
+        dest="sync_github",
+        action="store_false",
+        help="Do not sync STOCKBIT_TOKEN to GitHub repository secrets.",
     )
     parser.add_argument(
         "--sync-rclone",
@@ -505,7 +518,8 @@ def main(args: Optional[Sequence[str]] = None) -> int:
         local_ok = update_env_file(token, local_env_path)
         success = success and local_ok
 
-    if not parsed_args.local_only:
+    # only attempt remote vm update if explicitly requested via --sync-vm or --remote-only
+    if parsed_args.sync_vm or parsed_args.remote_only:
         remote_ok = update_remote_vm(
             token=token,
             host=parsed_args.host,
