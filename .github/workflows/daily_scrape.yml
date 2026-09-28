@@ -3,7 +3,7 @@ name: Daily IDX Market Scrape & Google Drive Sync
 on:
   schedule:
     # 12:00 UTC is 19:00 WIB (Asia/Jakarta), Monday through Friday
-    - cron: '0 12 * * 1-5'
+    - cron: '15 12 * * 1-5'
   workflow_dispatch:
     inputs:
       target_date:
