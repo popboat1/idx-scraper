@@ -238,7 +238,7 @@ async def fetch_cycle(
     scraper: IDXScraper,
     symbols: list,
     base_output_dir: Path,
-    concurrency: int = 3,
+    concurrency: int = 6,
     force_recompute: bool = False,
     target_date: Optional[str] = None,
 ):
@@ -356,7 +356,7 @@ async def main():
     idx_config = config.get("idx_scraper", {})
 
     base_output_dir = Path(idx_config.get("output_dir", "idx_data"))
-    concurrency = args.concurrency if args.concurrency is not None else idx_config.get("concurrency", 3)
+    concurrency = args.concurrency if args.concurrency is not None else idx_config.get("concurrency", 6)
     force_recompute = args.force_recompute
 
     scraper = IDXScraper(

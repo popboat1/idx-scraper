@@ -1,7 +1,7 @@
 idx_scraper:
   base_url: https://exodus.stockbit.com
   fixed_universe_size: 200
-  concurrency: 3
+  concurrency: 6
   dynamic_scanner: true
   scanner_interval_sec: 300
   poll_interval_sec: 120
