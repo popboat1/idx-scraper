@@ -9,10 +9,14 @@ AGAR,Company AGAR,General
 AGII,Company AGII,General
 AGRO,Company AGRO,General
 AGRS,Company AGRS,General
+AIMS,Company AIMS,General
 AISA,Company AISA,General
+AKKU,Company AKKU,General
 AKRA,Company AKRA,General
+ALKA,Company ALKA,General
 AMMN,Company AMMN,General
 AMRT,Company AMRT,General
+ANDI,Company ANDI,General
 ANTM,Company ANTM,General
 APEX,Company APEX,General
 APLN,Company APLN,General
@@ -37,6 +41,7 @@ BACH,Company BACH,General
 BAJA,Company BAJA,General
 BALI,Company BALI,General
 BANK,Company BANK,General
+BAUT,Company BAUT,General
 BBCA,Company BBCA,General
 BBKP,Company BBKP,General
 BBNI,Company BBNI,General
@@ -48,6 +53,7 @@ BBYB,Company BBYB,General
 BDKR,Company BDKR,General
 BDMN,Company BDMN,General
 BELL,Company BELL,General
+BESS,Company BESS,General
 BEST,Company BEST,General
 BFIN,Company BFIN,General
 BIPI,Company BIPI,General
@@ -56,6 +62,8 @@ BJBR,Company BJBR,General
 BJTM,Company BJTM,General
 BKDP,Company BKDP,General
 BKSL,Company BKSL,General
+BLTA,Company BLTA,General
+BLTZ,Company BLTZ,General
 BMHS,Company BMHS,General
 BMRI,Company BMRI,General
 BMTR,Company BMTR,General
@@ -82,6 +90,7 @@ CARE,Company CARE,General
 CARS,Company CARS,General
 CASS,Company CASS,General
 CBRE,Company CBRE,General
+CCSI,Company CCSI,General
 CDIA,Company CDIA,General
 CENT,Company CENT,General
 CLEO,Company CLEO,General
@@ -114,6 +123,7 @@ ELSA,Company ELSA,General
 ELTY,Company ELTY,General
 ENRG,Company ENRG,General
 ENZO,Company ENZO,General
+EPAC,Company EPAC,General
 EPMT,Company EPMT,General
 ERAA,Company ERAA,General
 ERAL,Company ERAL,General
@@ -216,6 +226,7 @@ MDLN,Company MDLN,General
 MEDC,Company MEDC,General
 MEGA,Company MEGA,General
 META,Company META,General
+MGNA,Company MGNA,General
 MIDI,Company MIDI,General
 MIKA,Company MIKA,General
 MMLP,Company MMLP,General
@@ -255,6 +266,7 @@ POLY,Company POLY,General
 PRDA,Company PRDA,General
 PSAB,Company PSAB,General
 PTBA,Company PTBA,General
+PTIS,Company PTIS,General
 PTPP,Company PTPP,General
 PTRO,Company PTRO,General
 PTSN,Company PTSN,General
@@ -267,6 +279,7 @@ RLCO,Company RLCO,General
 ROCK,Company ROCK,General
 ROTI,Company ROTI,General
 RSGK,Company RSGK,General
+SAFE,Company SAFE,General
 SAME,Company SAME,General
 SCMA,Company SCMA,General
 SEMA,Company SEMA,General
@@ -288,6 +301,7 @@ SOCI,Company SOCI,General
 SOFA,Company SOFA,General
 SOHO,Company SOHO,General
 SONA,Company SONA,General
+SOSS,Company SOSS,General
 SPRE,Company SPRE,General
 SQMI,Company SQMI,General
 SRAJ,Company SRAJ,General
@@ -299,6 +313,7 @@ SUPA,Company SUPA,General
 SUPR,Company SUPR,General
 SWID,Company SWID,General
 TAMU,Company TAMU,General
+TAXI,Company TAXI,General
 TBIG,Company TBIG,General
 TCID,Company TCID,General
 TCPI,Company TCPI,General
@@ -317,10 +332,12 @@ TRUE,Company TRUE,General
 TSPC,Company TSPC,General
 TURI,Company TURI,General
 ULTJ,Company ULTJ,General
+UNIQ,Company UNIQ,General
 UNIT,Company UNIT,General
 UNTR,Company UNTR,General
 UNVR,Company UNVR,General
 UVCR,Company UVCR,General
+VERN,Company VERN,General
 VICI,Company VICI,General
 VIVA,PT Visi Media Asia Tbk,General
 VKTR,Company VKTR,General
@@ -330,6 +347,7 @@ WIFI,Company WIFI,General
 WIKA,Company WIKA,General
 WINS,Company WINS,General
 WIRG,Company WIRG,General
+WMPP,Company WMPP,General
 WOOD,Company WOOD,General
 WTON,Company WTON,General
 ZATA,Company ZATA,General
