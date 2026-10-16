@@ -146,6 +146,7 @@ class IDXScraper:
         sort_by: str = "SORT_BY_OPEN",
         action_type: str = "ACTION_TYPE_ALL",
         board_type: str = "BOARD_TYPE_ALL",
+        date: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/order-trade/order-queue"
         all_data = []
@@ -169,6 +170,8 @@ class IDXScraper:
                 "sort_by": sort_by,
                 "sort_direction": sort_direction,
             }
+            if date:
+                params["date"] = date
             
             if last_exchange_order_number:
                 params["last_exchange_order_number"] = last_exchange_order_number
@@ -179,6 +182,16 @@ class IDXScraper:
                 
                 if not items:
                     break
+
+                if date and len(date.replace("-", "")) >= 8:
+                    clean_d8 = date.replace("-", "")[:8]
+                    iso_d10 = f"{clean_d8[:4]}-{clean_d8[4:6]}-{clean_d8[6:8]}"
+                    first_t = str(items[0].get("time", ""))
+                    if len(first_t) >= 10 and first_t[:2] == "20" and not first_t.startswith(iso_d10):
+                        logger.warning(
+                            f"[{symbol}] order_queue returned orders from {first_t[:10]} instead of requested {iso_d10}; stopping pagination."
+                        )
+                        break
                     
                 for item in items:
                     def parse_num(v, is_float=False):
@@ -227,7 +240,14 @@ class IDXScraper:
                 
         return all_data
 
-    async def fetch_running_trade(self, symbol: str, limit: int = 80, paginate: bool = False, max_pages: int = 10000) -> List[Dict[str, Any]]:
+    async def fetch_running_trade(
+        self,
+        symbol: str,
+        limit: int = 80,
+        paginate: bool = False,
+        max_pages: int = 10000,
+        date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/order-trade/running-trade"
         all_data = []
         has_next_page = True
@@ -246,6 +266,8 @@ class IDXScraper:
                 ("limit", str(limit)),
                 ("order_by", "RUNNING_TRADE_ORDER_BY_TIME")
             ]
+            if date:
+                params.append(("date", date))
             
             if trade_number:
                 params.append(("trade_number", str(trade_number)))

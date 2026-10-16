@@ -167,6 +167,24 @@ def fetch_macro_data(base_output_dir: Path, date_str: str):
 
     return results
 
+def _filter_orders_for_date(orders: list[dict], date_str: str, api_date_str: str) -> list[dict]:
+    """Filters order queue records so live-day orders never pollute a historical date partition."""
+    filtered = []
+    for item in orders:
+        eon = str(item.get("exchange_order_number", ""))
+        t_str = str(item.get("time", ""))
+        # if exchange_order_number has an 8-digit YYYYMMDD prefix, verify it matches date_str
+        if len(eon) >= 8 and eon[:8].isdigit() and eon[:4].startswith("20"):
+            if eon[:8] != date_str:
+                continue
+        # if time has an ISO YYYY-MM-DD prefix, verify it matches api_date_str
+        elif len(t_str) >= 10 and t_str[4:5] == "-" and t_str[7:8] == "-":
+            if t_str[:10] != api_date_str:
+                continue
+        filtered.append(item)
+    return filtered
+
+
 async def fetch_single_symbol(
     scraper: IDXScraper,
     symbol: str,
@@ -174,11 +192,13 @@ async def fetch_single_symbol(
     date_str: str,
     api_date_str: str,
     force_recompute: bool = False,
-) -> None:
-    """Fetches order queue, running trades, and market detector for a single symbol."""
+) -> bool:
+    """Fetches order queue, running trades, and market detector for a single symbol.
+    Returns True if at least one non-empty parquet file exists for the symbol.
+    """
     if not force_recompute and is_symbol_scraped(symbol_dir):
         logger.info(f"[{symbol}] Already scraped for date={date_str}. Skipping.")
-        return
+        return True
         
     symbol_dir.mkdir(parents=True, exist_ok=True)
     
@@ -188,13 +208,20 @@ async def fetch_single_symbol(
             symbol=symbol, 
             limit=100, 
             paginate=True, 
-            max_pages=10000
+            max_pages=10000,
+            date=api_date_str,
         )
         if queue_data:
-            table_q = pa.Table.from_pylist(queue_data)
-            q_path = symbol_dir / "order_queue.parquet"
-            pq.write_table(table_q, q_path)
-            logger.info(f"[{symbol}] Saved {len(queue_data)} orders to {q_path}")
+            valid_orders = _filter_orders_for_date(queue_data, date_str, api_date_str)
+            if valid_orders:
+                table_q = pa.Table.from_pylist(valid_orders)
+                q_path = symbol_dir / "order_queue.parquet"
+                pq.write_table(table_q, q_path)
+                logger.info(f"[{symbol}] Saved {len(valid_orders)} orders to {q_path}")
+            else:
+                logger.warning(
+                    f"[{symbol}] Discarded {len(queue_data)} order_queue rows that did not match date={date_str}"
+                )
     except Exception as e:
         logger.error(f"Failed to fetch/save order queue for {symbol}: {e}")
         
@@ -204,7 +231,8 @@ async def fetch_single_symbol(
             symbol=symbol, 
             limit=100, 
             paginate=True, 
-            max_pages=10000
+            max_pages=10000,
+            date=api_date_str,
         )
         if trades:
             table_trades = pa.Table.from_pylist(trades)
@@ -230,9 +258,19 @@ async def fetch_single_symbol(
                 table_brokers = pa.Table.from_pylist(brokers_all)
                 pq.write_table(table_brokers, symbol_dir / "broker_summary.parquet")
                 
-            logger.info(f"[{symbol}] Saved market detector data to {symbol_dir}")
+            if bandar_list or brokers_all:
+                logger.info(f"[{symbol}] Saved market detector data to {symbol_dir}")
     except Exception as e:
         logger.error(f"Failed to fetch/save market detector for {symbol}: {e}")
+
+    scraped_ok = is_symbol_scraped(symbol_dir)
+    if not scraped_ok and symbol_dir.exists():
+        # clean up empty symbol directory if all stockbit endpoints failed or returned empty
+        try:
+            symbol_dir.rmdir()
+        except OSError:
+            pass
+    return scraped_ok
 
 async def fetch_cycle(
     scraper: IDXScraper,
@@ -241,7 +279,7 @@ async def fetch_cycle(
     concurrency: int = 6,
     force_recompute: bool = False,
     target_date: Optional[str] = None,
-):
+) -> int:
     if target_date:
         # parse explicit target date string YYYYMMDD
         trading_date = datetime.strptime(target_date, "%Y%m%d")
@@ -258,11 +296,11 @@ async def fetch_cycle(
     
     sem = asyncio.Semaphore(max(1, int(concurrency)))
     
-    async def worker(idx: int, symbol: str):
+    async def worker(idx: int, symbol: str) -> bool:
         async with sem:
             logger.info(f"[{idx+1}/{len(symbols)}] Processing {symbol}...")
             symbol_dir = base_output_dir / f"date={date_str}" / f"symbol={symbol}"
-            await fetch_single_symbol(
+            ok = await fetch_single_symbol(
                 scraper=scraper,
                 symbol=symbol,
                 symbol_dir=symbol_dir,
@@ -271,9 +309,12 @@ async def fetch_cycle(
                 force_recompute=force_recompute,
             )
             await asyncio.sleep(scraper.rate_limit_delay)
+            return ok
             
     tasks = [worker(i, sym) for i, sym in enumerate(symbols)]
-    await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks)
+    succeeded_count = sum(1 for r in results if r)
+    logger.info(f"Completed symbol batch for date={date_str}: {succeeded_count}/{len(symbols)} symbols saved.")
         
     # fetch IHSG market summary & intraday prices
     logger.info("Fetching IHSG data...")
@@ -282,6 +323,40 @@ async def fetch_cycle(
     # fetch global macro data
     logger.info("Fetching global macro data...")
     fetch_macro_data(base_output_dir, date_str)
+
+    # fail loudly if universe was non-empty but zero stockbit symbols were saved
+    if len(symbols) > 0 and succeeded_count == 0:
+        raise RuntimeError(
+            f"Batch scrape failed: 0/{len(symbols)} symbols saved for date={date_str}. "
+            "Check STOCKBIT_TOKEN validity and API connectivity."
+        )
+
+    return succeeded_count
+
+
+def is_token_expired(token: str) -> bool:
+    """Returns True if the JWT token contains an exp claim that has already passed."""
+    if not token:
+        return True
+    try:
+        import base64
+        import json
+        raw = token[7:].strip() if token.startswith("Bearer ") else token
+        parts = raw.split(".")
+        if len(parts) < 2:
+            return False
+        payload_b64 = parts[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+        exp = payload.get("exp")
+        if exp:
+            exp_dt = datetime.fromtimestamp(exp, tz=WIB)
+            now_dt = datetime.now(WIB)
+            return (exp_dt - now_dt).total_seconds() <= 0
+    except Exception:
+        pass
+    return False
+
 
 def load_stockbit_token(env_path: Optional[Path] = None) -> str:
     """Dynamically loads STOCKBIT_TOKEN from .env file or environment variables,
@@ -376,6 +451,10 @@ async def main():
         if args.run_now or args.once:
             logger.info("Manual trigger (--run-now/--once) detected. Running fetch cycle immediately.")
             fresh_token = load_stockbit_token()
+            active_token = fresh_token or token
+            if is_token_expired(active_token):
+                logger.error("Aborting one-shot/manual batch scrape: STOCKBIT_TOKEN is expired.")
+                sys.exit(1)
             if fresh_token:
                 scraper.set_auth_token(fresh_token)
             await fetch_cycle(
